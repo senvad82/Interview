@@ -1,0 +1,5 @@
+C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\bin\Debug\SoftwareTest.pdb
+C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\obj\Debug\SoftwareTest.csprojResolveAssemblyReference.cache
+C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\obj\Debug\SoftwareTest.pdb
+C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\bin\Debug\SoftwareTest.exe
+C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\obj\Debug\SoftwareTest.exe
