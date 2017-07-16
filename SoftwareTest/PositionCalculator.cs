@@ -64,4 +64,121 @@
 
 namespace mlp.interviews.boxing.problem
 {
+    using System.Collections.Generic;
+    using System;
+    using System.IO;
+    using System.Linq;
+    using System.Reflection;
+    public class Position
+    {
+        public string trader { get; set; }
+        public string broker { get; set; }
+        public string symbol { get; set; }
+        public int quantity { get; set; }
+        public double price { get; set; }
+    }
+
+    public static class PositionTranslator
+    {
+        public static Position TranslatePosition(string csvLine)
+        {
+            Position pos = new Position();
+            string[] values = csvLine.Split(',');
+            pos.trader = values[0];
+            pos.broker = values[1];
+            pos.symbol = values[2];
+            pos.quantity = Convert.ToInt32(values[3]);
+            pos.price = Convert.ToDouble(values[4]);
+
+            return pos;
+         }
+
+    }
+
+    public class PositionCalculator
+    {
+
+        private string _outputFilePath;
+
+        public List<Position> PositionList { get; set; }
+        public PositionCalculator(string inputFilePath, string outputFilePath) 
+        {
+            PositionList = ImportCSVFile(inputFilePath);
+            _outputFilePath = outputFilePath;
+        }
+        public PositionCalculator()
+        {
+
+        }
+
+        public List<Position> ImportCSVFile(string path)
+        {
+            return File.ReadAllLines(path)
+                                                       .Skip(1)
+                                                       .Select(p => PositionTranslator.TranslatePosition(p))
+                                                       .ToList();
+        }
+
+        public void ExportCSVFile(string path, List<Position> positions)
+        {
+            using (var writer = new StreamWriter(path))
+            {
+                writer.WriteLine(string.Join(", ", "Trader","Symbol","Quantity"));
+
+                foreach (var item in positions)
+                {
+                    writer.WriteLine(string.Join(", ", item.trader,item.symbol,item.quantity));
+                }
+            }
+        }
+
+        public List<Position> GetNetPositions()
+        {
+            return PositionList.GroupBy(p => new { p.trader, p.symbol }).Select(cl => new Position
+            {
+                trader = cl.First().trader,
+                symbol = cl.First().symbol,
+                quantity = cl.Sum(c => c.quantity),
+            }).ToList();
+            
+        }
+        
+        public List<Position> GetBoxedPositions()
+        {
+            return PositionList.Where(p1 => PositionList.Any(p2 => p2.trader == p1.trader && p2.symbol == p1.symbol && p2.broker != p1.broker && ((p2.quantity < 0 && p1.quantity > 0) || (p2.quantity > 0 && p1.quantity < 0))) && p1.quantity > 0).GroupBy(p3=> new { p3.trader, p3.symbol}).Select(cl => new Position
+            {
+                trader = cl.First().trader,
+                symbol = cl.First().symbol,
+                quantity = cl.Min(c => c.quantity),
+            }).ToList();
+            
+         }
+
+    }
+
+    public class PositionCalculatorTest
+    {
+        public static void Main(string[] args)
+        {
+            var pocCalc = new PositionCalculator();
+            var positionList = new List<Position>();
+            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = 50, price = 100.23 });
+            positionList.Add(new Position() { trader = "Joe", broker = "ML",symbol="IBM", quantity = 100, price = 100.23 });
+            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -50, price = 100.23 });
+            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -20, price = 100.23 });
+            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -10, price = 100.23 });
+            positionList.Add(new Position() { trader = "Joe", broker = "MLB",symbol = "IBM", quantity = -10, price = 100.23 });
+            pocCalc.PositionList = positionList;
+            var result = pocCalc.GetNetPositions();
+            var result2 = pocCalc.GetBoxedPositions();
+            pocCalc.ExportCSVFile("Output.csv", result2);
+            if (result.Count == 1 && result[0].quantity == 60 && result2.Count==1 && result2[0].quantity == 50)
+                Console.WriteLine("Test Passed");
+            else
+                Console.WriteLine("Test failed");
+
+        }
+    }
+      
+    
 }
