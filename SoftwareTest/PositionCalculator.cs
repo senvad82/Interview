@@ -69,6 +69,8 @@ namespace mlp.interviews.boxing.problem
     using System.IO;
     using System.Linq;
     using System.Reflection;
+
+    
     public class Position
     {
         public string trader { get; set; }
@@ -94,44 +96,61 @@ namespace mlp.interviews.boxing.problem
          }
 
     }
+    public interface IPositionDataService
+    {
+        IList<Position> Import(string inputPath);
+        bool Export(string outputPath, IList<Position> input);
+    }
+    public class CSVPositionDataService: IPositionDataService
+    {
+        public IList<Position> Import(string inputPath)
+        {
+            return File.ReadAllLines(inputPath)
+                                                       .Skip(1)
+                                                       .Select(p => PositionTranslator.TranslatePosition(p))
+                                                       .ToList();
+        }
+
+        public bool Export(string outputPath, IList<Position> input)
+        {
+            try
+            {
+                using (var writer = new StreamWriter(outputPath))
+                {
+                    writer.WriteLine(string.Join(", ", "Trader", "Symbol", "Quantity"));
+
+                    foreach (var item in input)
+                    {
+                        writer.WriteLine(string.Join(", ", item.trader, item.symbol, item.quantity));
+                    }
+                }
+                return true;
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return false;
+            }
+            
+
+        }
+    }
 
     public class PositionCalculator
     {
 
         private string _outputFilePath;
 
-        public List<Position> PositionList { get; set; }
-        public PositionCalculator(string inputFilePath, string outputFilePath) 
+        public IList<Position> PositionList { get; set; }
+
+        private IPositionDataService _positionDataService;
+       
+        public PositionCalculator(IPositionDataService dataService)
         {
-            PositionList = ImportCSVFile(inputFilePath);
-            _outputFilePath = outputFilePath;
-        }
-        public PositionCalculator()
-        {
+            _positionDataService = dataService;
 
         }
-
-        public List<Position> ImportCSVFile(string path)
-        {
-            return File.ReadAllLines(path)
-                                                       .Skip(1)
-                                                       .Select(p => PositionTranslator.TranslatePosition(p))
-                                                       .ToList();
-        }
-
-        public void ExportCSVFile(string path, List<Position> positions)
-        {
-            using (var writer = new StreamWriter(path))
-            {
-                writer.WriteLine(string.Join(", ", "Trader","Symbol","Quantity"));
-
-                foreach (var item in positions)
-                {
-                    writer.WriteLine(string.Join(", ", item.trader,item.symbol,item.quantity));
-                }
-            }
-        }
-
+        
         public List<Position> GetNetPositions()
         {
             return PositionList.GroupBy(p => new { p.trader, p.symbol }).Select(cl => new Position
@@ -142,7 +161,46 @@ namespace mlp.interviews.boxing.problem
             }).ToList();
             
         }
-        
+        public bool GetNetPositions(string inputPath, string outputPath)
+        {
+            try
+            {
+                PositionList = _positionDataService.Import(inputPath);
+
+                var netPositions = GetNetPositions();
+
+                _positionDataService.Export(outputPath, netPositions);
+                return true;
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return false;
+            }
+            
+
+        }
+
+        public bool GetBoxedPositions(string inputPath, string outputPath)
+        {
+            try
+            {
+                PositionList = _positionDataService.Import(inputPath);
+
+                var boxPositions = GetBoxedPositions();
+
+                _positionDataService.Export(outputPath, boxPositions);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return false;
+            }
+
+
+        }
+
         public List<Position> GetBoxedPositions()
         {
             return PositionList.Where(p1 => PositionList.Any(p2 => p2.trader == p1.trader && p2.symbol == p1.symbol && p2.broker != p1.broker && ((p2.quantity < 0 && p1.quantity > 0) || (p2.quantity > 0 && p1.quantity < 0))) && p1.quantity > 0).GroupBy(p3=> new { p3.trader, p3.symbol}).Select(cl => new Position
@@ -153,32 +211,58 @@ namespace mlp.interviews.boxing.problem
             }).ToList();
             
          }
-
+              
     }
+    // Test cases are commented out so that main program can run
+    // Normal cases we setup different test project with nunit references.
+    //public class PositionCalculatorTest
+    //{
+    //    public static void Main(string[] args)
+    //    {
+    //        var pocCalc = new PositionCalculator();
+    //        var positionList = new List<Position>();
+    //        positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = 50, price = 100.23 });
+    //        positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = 100, price = 100.23 });
+    //        positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -50, price = 100.23 });
+    //        positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -20, price = 100.23 });
+    //        positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -10, price = 100.23 });
+    //        positionList.Add(new Position() { trader = "Joe", broker = "MLB", symbol = "IBM", quantity = -10, price = 100.23 });
+    //        pocCalc.PositionList = positionList;
+    //        var result = pocCalc.GetNetPositions();
+    //        var result2 = pocCalc.GetBoxedPositions();
+    //        if (result.Count == 1 && result[0].quantity == 60 )
+    //           Console.WriteLine("Net Position Validated");
+    //        else
+    //            Console.WriteLine("Net Position validation error");
 
-    public class PositionCalculatorTest
+    //        if (result2.Count == 1 && result2[0].quantity == 50)
+    //            Console.WriteLine("Box Position Validated");
+    //        else
+    //            Console.WriteLine("Box Position Validation error");
+
+    //    }
+    //}
+
+    public class PositionCalculatorClient
     {
         public static void Main(string[] args)
         {
-            var pocCalc = new PositionCalculator();
-            var positionList = new List<Position>();
-            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = 50, price = 100.23 });
-            positionList.Add(new Position() { trader = "Joe", broker = "ML",symbol="IBM", quantity = 100, price = 100.23 });
-            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -50, price = 100.23 });
-            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -20, price = 100.23 });
-            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -10, price = 100.23 });
-            positionList.Add(new Position() { trader = "Joe", broker = "MLB",symbol = "IBM", quantity = -10, price = 100.23 });
-            pocCalc.PositionList = positionList;
-            var result = pocCalc.GetNetPositions();
-            var result2 = pocCalc.GetBoxedPositions();
-            pocCalc.ExportCSVFile("Output.csv", result2);
-            if (result.Count == 1 && result[0].quantity == 60 && result2.Count==1 && result2[0].quantity == 50)
-                Console.WriteLine("Test Passed");
-            else
-                Console.WriteLine("Test failed");
+            //Test cases commented out usually we will setup this in nunit. 
+            //
+            var inputPath = @"data\test_data.csv";
+            var outputPathFile1 = @"data\netPos.csv";
+            var outputPathFile2 = @"data\boxPos.csv";
+            var pocCalc = new PositionCalculator(new CSVPositionDataService());
+            pocCalc.GetNetPositions(inputPath, outputPathFile1);
+            pocCalc.GetBoxedPositions(inputPath, outputPathFile2);
+            //pocCalc.GetNetPositions
+
+            //if (pocCalc.Winner()) Console.WriteLine("Test Case Passed");
+
+
 
         }
     }
-      
-    
+
+
 }

@@ -1,5 +1,8 @@
 C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\bin\Debug\SoftwareTest.pdb
-C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\obj\Debug\SoftwareTest.csprojResolveAssemblyReference.cache
 C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\obj\Debug\SoftwareTest.pdb
 C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\bin\Debug\SoftwareTest.exe
 C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\obj\Debug\SoftwareTest.exe
+C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\bin\Debug\data\boxed_positions_expected.csv
+C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\bin\Debug\data\net_positions_expected.csv
+C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\bin\Debug\data\test_data.csv
+C:\senvad\Study\Interview\SoftwareTest\SoftwareTest\obj\Debug\SoftwareTest.csprojResolveAssemblyReference.cache
