@@ -117,11 +117,11 @@ namespace mlp.interviews.boxing.problem
             {
                 using (var writer = new StreamWriter(outputPath))
                 {
-                    writer.WriteLine(string.Join(", ", "Trader", "Symbol", "Quantity"));
+                    writer.WriteLine(string.Join(",", "TRADER", "SYMBOL", "QUANTITY"));
 
                     foreach (var item in input)
                     {
-                        writer.WriteLine(string.Join(", ", item.trader, item.symbol, item.quantity));
+                        writer.WriteLine(string.Join(",", item.trader, item.symbol, item.quantity));
                     }
                 }
                 return true;
@@ -129,9 +129,9 @@ namespace mlp.interviews.boxing.problem
             catch(Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                return false;
+                throw ex;
             }
-            
+                       
 
         }
     }
@@ -166,9 +166,7 @@ namespace mlp.interviews.boxing.problem
             try
             {
                 PositionList = _positionDataService.Import(inputPath);
-
                 var netPositions = GetNetPositions();
-
                 _positionDataService.Export(outputPath, netPositions);
                 return true;
             }
@@ -186,9 +184,7 @@ namespace mlp.interviews.boxing.problem
             try
             {
                 PositionList = _positionDataService.Import(inputPath);
-
                 var boxPositions = GetBoxedPositions();
-
                 _positionDataService.Export(outputPath, boxPositions);
                 return true;
             }
@@ -203,11 +199,11 @@ namespace mlp.interviews.boxing.problem
 
         public List<Position> GetBoxedPositions()
         {
-            return PositionList.Where(p1 => PositionList.Any(p2 => p2.trader == p1.trader && p2.symbol == p1.symbol && p2.broker != p1.broker && ((p2.quantity < 0 && p1.quantity > 0) || (p2.quantity > 0 && p1.quantity < 0))) && p1.quantity > 0).GroupBy(p3=> new { p3.trader, p3.symbol}).Select(cl => new Position
+            return PositionList.Where(p1 => PositionList.Any(p2 => p2.trader == p1.trader && p2.symbol == p1.symbol && p2.broker != p1.broker && ((p2.quantity < 0 && p1.quantity > 0) || (p2.quantity > 0 && p1.quantity < 0))) && p1.quantity < 0).GroupBy(p3=> new { p3.trader, p3.symbol}).Select(cl => new Position
             {
                 trader = cl.First().trader,
                 symbol = cl.First().symbol,
-                quantity = cl.Min(c => c.quantity),
+                quantity = cl.Sum(c => Math.Abs(c.quantity)),
             }).ToList();
             
          }
