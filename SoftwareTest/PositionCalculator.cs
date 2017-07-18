@@ -70,7 +70,7 @@ namespace mlp.interviews.boxing.problem
     using System.Linq;
     using System.Reflection;
 
-    
+
     public class Position
     {
         public string trader { get; set; }
@@ -93,99 +93,84 @@ namespace mlp.interviews.boxing.problem
             pos.price = Convert.ToDouble(values[4]);
 
             return pos;
-         }
+        }
 
     }
     public interface IPositionDataService
     {
-        IList<Position> Import(string inputPath);
-        bool Export(string outputPath, IList<Position> input);
+        string InputFilePath { get; set; }
+        string OutputFilePath { get; set; }
+        IList<Position> Import();
+        bool Export(IList<Position> input);
     }
-    public class CSVPositionDataService: IPositionDataService
+    public class CSVPositionDataService : IPositionDataService
     {
-        public IList<Position> Import(string inputPath)
+        public string InputFilePath { get; set; }
+
+        public string OutputFilePath { get; set; }
+
+        public CSVPositionDataService(string inputFilePath, string outputFilePath)
         {
-            return File.ReadAllLines(inputPath)
+            this.InputFilePath = inputFilePath;
+            this.OutputFilePath = outputFilePath;
+        }
+        public IList<Position> Import()
+        {
+            return File.ReadAllLines(this.InputFilePath)
                                                        .Skip(1)
                                                        .Select(p => PositionTranslator.TranslatePosition(p))
                                                        .ToList();
         }
 
-        public bool Export(string outputPath, IList<Position> input)
+        public bool Export(IList<Position> positions)
         {
             try
             {
-                using (var writer = new StreamWriter(outputPath))
+                using (var writer = new StreamWriter(this.OutputFilePath))
                 {
                     writer.WriteLine(string.Join(",", "TRADER", "SYMBOL", "QUANTITY"));
 
-                    foreach (var item in input)
+                    foreach (var item in positions)
                     {
                         writer.WriteLine(string.Join(",", item.trader, item.symbol, item.quantity));
                     }
                 }
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
                 throw ex;
             }
-                       
+
 
         }
     }
-
-    public class PositionCalculator
+    public interface IPositionCalculator
     {
+        IList<Position> PositionList { get; set; }
+        List<Position> Calculate();
 
-        private string _outputFilePath;
+        bool ProcessFile();
 
+
+    }
+    public class BoxPositionCalculator : IPositionCalculator
+    {
         public IList<Position> PositionList { get; set; }
 
         private IPositionDataService _positionDataService;
-       
-        public PositionCalculator(IPositionDataService dataService)
+        public BoxPositionCalculator(IPositionDataService dataService)
         {
             _positionDataService = dataService;
-
         }
-        
-        public List<Position> GetNetPositions()
-        {
-            return PositionList.GroupBy(p => new { p.trader, p.symbol }).Select(cl => new Position
-            {
-                trader = cl.First().trader,
-                symbol = cl.First().symbol,
-                quantity = cl.Sum(c => c.quantity),
-            }).ToList();
-            
-        }
-        public bool GetNetPositions(string inputPath, string outputPath)
+        public bool ProcessFile()
         {
             try
             {
-                PositionList = _positionDataService.Import(inputPath);
-                var netPositions = GetNetPositions();
-                _positionDataService.Export(outputPath, netPositions);
-                return true;
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                return false;
-            }
-            
-
-        }
-
-        public bool GetBoxedPositions(string inputPath, string outputPath)
-        {
-            try
-            {
-                PositionList = _positionDataService.Import(inputPath);
-                var boxPositions = GetBoxedPositions();
-                _positionDataService.Export(outputPath, boxPositions);
+                PositionList = _positionDataService.Import();
+                var boxPositions = Calculate();
+                _positionDataService.Export(boxPositions);
                 return true;
             }
             catch (Exception ex)
@@ -197,67 +182,131 @@ namespace mlp.interviews.boxing.problem
 
         }
 
-        public List<Position> GetBoxedPositions()
+        public List<Position> Calculate()
         {
-            return PositionList.Where(p1 => PositionList.Any(p2 => p2.trader == p1.trader && p2.symbol == p1.symbol && p2.broker != p1.broker && ((p2.quantity < 0 && p1.quantity > 0) || (p2.quantity > 0 && p1.quantity < 0))) && p1.quantity < 0).GroupBy(p3=> new { p3.trader, p3.symbol}).Select(cl => new Position
+            return PositionList.Where(p1 => PositionList.Any(p2 => p2.trader == p1.trader && p2.symbol == p1.symbol && p2.broker != p1.broker && ((p2.quantity < 0 && p1.quantity > 0) || (p2.quantity > 0 && p1.quantity < 0))) && p1.quantity < 0).GroupBy(p3 => new { p3.trader, p3.symbol }).Select(cl => new Position
             {
                 trader = cl.First().trader,
                 symbol = cl.First().symbol,
                 quantity = cl.Sum(c => Math.Abs(c.quantity)),
             }).ToList();
-            
-         }
-              
+
+        }
     }
-    // Test cases are commented out so that main program can run
-    // Normal cases we setup different test project with nunit references.
-    //public class PositionCalculatorTest
-    //{
-    //    public static void Main(string[] args)
-    //    {
-    //        var pocCalc = new PositionCalculator();
-    //        var positionList = new List<Position>();
-    //        positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = 50, price = 100.23 });
-    //        positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = 100, price = 100.23 });
-    //        positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -50, price = 100.23 });
-    //        positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -20, price = 100.23 });
-    //        positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -10, price = 100.23 });
-    //        positionList.Add(new Position() { trader = "Joe", broker = "MLB", symbol = "IBM", quantity = -10, price = 100.23 });
-    //        pocCalc.PositionList = positionList;
-    //        var result = pocCalc.GetNetPositions();
-    //        var result2 = pocCalc.GetBoxedPositions();
-    //        if (result.Count == 1 && result[0].quantity == 60 )
-    //           Console.WriteLine("Net Position Validated");
-    //        else
-    //            Console.WriteLine("Net Position validation error");
 
-    //        if (result2.Count == 1 && result2[0].quantity == 50)
-    //            Console.WriteLine("Box Position Validated");
-    //        else
-    //            Console.WriteLine("Box Position Validation error");
-
-    //    }
-    //}
-
-    public class PositionCalculatorClient
+    public class NetPositionCalculator: IPositionCalculator
     {
-        public static void Main(string[] args)
+        public IList<Position> PositionList { get; set; }
+
+        private IPositionDataService _positionDataService;
+
+        public NetPositionCalculator(IPositionDataService dataService)
         {
-            //Test cases commented out usually we will setup this in nunit. 
-            //
-            var inputPath = @"data\test_data.csv";
-            var outputPathFile1 = @"data\netPos.csv";
-            var outputPathFile2 = @"data\boxPos.csv";
-            var pocCalc = new PositionCalculator(new CSVPositionDataService());
-            pocCalc.GetNetPositions(inputPath, outputPathFile1);
-            pocCalc.GetBoxedPositions(inputPath, outputPathFile2);
-            //pocCalc.GetNetPositions
+            _positionDataService = dataService;
 
-            //if (pocCalc.Winner()) Console.WriteLine("Test Case Passed");
+        }
 
+        public List<Position> Calculate()
+        {
+            return PositionList.GroupBy(p => new { p.trader, p.symbol }).Select(cl => new Position
+            {
+                trader = cl.First().trader,
+                symbol = cl.First().symbol,
+                quantity = cl.Sum(c => c.quantity),
+            }).ToList();
+
+        }
+        public bool ProcessFile()
+        {
+            try
+            {
+                PositionList = _positionDataService.Import();
+                var netPositions = Calculate();
+                _positionDataService.Export(netPositions);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return false;
+            }
 
 
         }
+
+       
+
+    }
+    public class PositionCalculatorTest{
+        public PositionCalculatorTest()
+        {
+
+        }
+        public bool RunTestCases()
+        {
+            bool retResult = true;
+            IPositionDataService dataService = new CSVPositionDataService(null, null);
+            IPositionCalculator netPosCalc = new NetPositionCalculator(dataService);
+            IPositionCalculator boxPosCalc = new BoxPositionCalculator(dataService);
+            var positionList = new List<Position>();
+            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = 50, price = 100.23 });
+            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = 100, price = 100.23 });
+            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -50, price = 100.23 });
+            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -20, price = 100.23 });
+            positionList.Add(new Position() { trader = "Joe", broker = "ML", symbol = "IBM", quantity = -10, price = 100.23 });
+            positionList.Add(new Position() { trader = "Joe", broker = "MLB", symbol = "IBM", quantity = -10, price = 100.23 });
+            netPosCalc.PositionList = positionList;
+            var result = netPosCalc.Calculate();
+            boxPosCalc.PositionList = positionList;
+            var result2 = boxPosCalc.Calculate();
+            if (result.Count == 1 && result[0].quantity == 60)
+                Console.WriteLine("Net Position Validated");
+            else { retResult = false; Console.WriteLine("Net Position validation error"); }
+                
+            if (result2.Count == 1 && result2[0].quantity == 10)
+                Console.WriteLine("Box Position Validated");
+            else { retResult = false; Console.WriteLine("Box Position Validation error"); }
+
+            return retResult;
+
+        }
+    }
+    
+    public class PositionCalculatorClient
+    {
+        //public static void Main(string[] args)
+        //{
+        //    //Test cases usually set it up using nunit, here i just added below for simplocity
+        //    //
+        //    var test = new PositionCalculatorTest();
+        //    if (!test.RunTestCases()) return;
+
+        //    // Only below code should be here and above test cases should be moved to nunit 
+        //    Console.WriteLine("Please Enter Position Data file fullpath(Including FileName)");
+        //    Console.WriteLine("----");
+        //    var inputFile = Console.ReadLine();
+        //    Console.WriteLine("Please Enter Net Position Output File Path(Including FileName).");
+        //    Console.WriteLine("----");
+        //    var netOutputPathFile1 = Console.ReadLine();
+        //    Console.WriteLine("Please Enter Box Position Output File Path(Including FileName).");
+        //    Console.WriteLine("----");
+        //    var boxOutputPathFile2 = Console.ReadLine();
+                        
+        //    IPositionDataService netDataService = new CSVPositionDataService(inputFile, netOutputPathFile1);
+        //    IPositionCalculator netPocCalc = new NetPositionCalculator(netDataService);
+        //    var result = netPocCalc.ProcessFile();
+
+        //    IPositionDataService boxDataService = new CSVPositionDataService(inputFile, boxOutputPathFile2);
+        //    IPositionCalculator boxPocCalc = new BoxPositionCalculator(boxDataService);
+        //    var result2 = boxPocCalc.ProcessFile();
+
+        //    if (result && result2) Console.WriteLine("Processing completed"); else Console.WriteLine("Error occured");
+
+        //    Console.WriteLine("Press any key to continue.");
+        //    Console.WriteLine("----");
+        //    Console.ReadLine();
+            
+        //}
     }
 
 
