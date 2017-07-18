@@ -274,39 +274,39 @@ namespace mlp.interviews.boxing.problem
     
     public class PositionCalculatorClient
     {
-        //public static void Main(string[] args)
-        //{
-        //    //Test cases usually set it up using nunit, here i just added below for simplocity
-        //    //
-        //    var test = new PositionCalculatorTest();
-        //    if (!test.RunTestCases()) return;
+        public static void Main(string[] args)
+        {
+            //Test cases usually set it up using nunit, here i just added below for simplocity
+            //
+            var test = new PositionCalculatorTest();
+            if (!test.RunTestCases()) return;
 
-        //    // Only below code should be here and above test cases should be moved to nunit 
-        //    Console.WriteLine("Please Enter Position Data file fullpath(Including FileName)");
-        //    Console.WriteLine("----");
-        //    var inputFile = Console.ReadLine();
-        //    Console.WriteLine("Please Enter Net Position Output File Path(Including FileName).");
-        //    Console.WriteLine("----");
-        //    var netOutputPathFile1 = Console.ReadLine();
-        //    Console.WriteLine("Please Enter Box Position Output File Path(Including FileName).");
-        //    Console.WriteLine("----");
-        //    var boxOutputPathFile2 = Console.ReadLine();
-                        
-        //    IPositionDataService netDataService = new CSVPositionDataService(inputFile, netOutputPathFile1);
-        //    IPositionCalculator netPocCalc = new NetPositionCalculator(netDataService);
-        //    var result = netPocCalc.ProcessFile();
+            // Only below code should be here and above test cases should be moved to nunit 
+            Console.WriteLine("Please Enter Position Data file fullpath(Including FileName)");
+            Console.WriteLine("----");
+            var inputFile = Console.ReadLine();
+            Console.WriteLine("Please Enter Net Position Output File Path(Including FileName).");
+            Console.WriteLine("----");
+            var netOutputPathFile1 = Console.ReadLine();
+            Console.WriteLine("Please Enter Box Position Output File Path(Including FileName).");
+            Console.WriteLine("----");
+            var boxOutputPathFile2 = Console.ReadLine();
 
-        //    IPositionDataService boxDataService = new CSVPositionDataService(inputFile, boxOutputPathFile2);
-        //    IPositionCalculator boxPocCalc = new BoxPositionCalculator(boxDataService);
-        //    var result2 = boxPocCalc.ProcessFile();
+            IPositionDataService netDataService = new CSVPositionDataService(inputFile, netOutputPathFile1);
+            IPositionCalculator netPocCalc = new NetPositionCalculator(netDataService);
+            var result = netPocCalc.ProcessFile();
 
-        //    if (result && result2) Console.WriteLine("Processing completed"); else Console.WriteLine("Error occured");
+            IPositionDataService boxDataService = new CSVPositionDataService(inputFile, boxOutputPathFile2);
+            IPositionCalculator boxPocCalc = new BoxPositionCalculator(boxDataService);
+            var result2 = boxPocCalc.ProcessFile();
 
-        //    Console.WriteLine("Press any key to continue.");
-        //    Console.WriteLine("----");
-        //    Console.ReadLine();
-            
-        //}
+            if (result && result2) Console.WriteLine("Processing completed"); else Console.WriteLine("Error occured");
+
+            Console.WriteLine("Press any key to continue.");
+            Console.WriteLine("----");
+            Console.ReadLine();
+
+        }
     }
 
 
